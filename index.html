@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <title>Roadmap PHP Interativo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="min-h-screen bg-zinc-950 text-zinc-50">
+
+<div x-data="roadmapApp()" class="max-w-6xl mx-auto px-4 py-8 md:py-12">
+    <!-- HEADER -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">
+                Roadmap PHP Interativo
+            </h1>
+            <p class="mt-1 text-zinc-400 text-sm md:text-base max-w-xl">
+                Explore as fases, veja ideias de projetos, tecnologias usadas e o que praticar em cada etapa do aprendizado em PHP.
+            </p>
+        </div>
+
+        <!-- Toggle de visualização -->
+        <div class="flex items-center gap-2 text-xs md:text-sm">
+        <span :class="viewMode === 'fases' ? 'text-emerald-400 font-semibold' : 'text-zinc-400'">
+          Fases
+        </span>
+            <button
+                    @click="toggleView()"
+                    class="relative inline-flex h-7 w-12 items-center rounded-full bg-zinc-800 border border-zinc-700 transition"
+            >
+          <span
+                  class="inline-block h-5 w-5 transform rounded-full bg-emerald-400 shadow shadow-emerald-500/50 transition"
+                  :class="viewMode === 'fases' ? 'translate-x-1' : 'translate-x-6'"
+          ></span>
+            </button>
+            <span :class="viewMode === 'projetos' ? 'text-emerald-400 font-semibold' : 'text-zinc-400'">
+          Projetos
+        </span>
+        </div>
+    </header>
+
+    <!-- PROGRESSO -->
+    <section class="mb-8">
+        <div class="flex items-center justify-between text-xs text-zinc-400 mb-2">
+            <span>Seu progresso na trilha</span>
+            <span x-text="`${selectedPhaseIndex + 1} / ${phases.length} fases`"></span>
+        </div>
+        <div class="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
+            <div
+                    class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-violet-400 transition-all duration-500"
+                    :style="`width: ${progressPercent()}%`"
+            ></div>
+        </div>
+    </section>
+
+    <div class="grid lg:grid-cols-[1.7fr,1.3fr] gap-6">
+        <!-- COLUNA ESQUERDA: FASES OU PROJETOS -->
+        <main>
+            <!-- MODO FASES -->
+            <template x-if="viewMode === 'fases'">
+                <div class="space-y-5">
+                    <!-- Timeline horizontal -->
+                    <div class="hidden md:flex items-center justify-between gap-2 mb-4">
+                        <template x-for="(fase, index) in phases" :key="index">
+                            <button
+                                    @click="selectPhase(index)"
+                                    class="group flex-1 flex flex-col items-center"
+                            >
+                                <div
+                                        class="w-8 h-8 flex items-center justify-center rounded-full border text-xs font-semibold transition
+                           group-hover:scale-105"
+                                        :class="index === selectedPhaseIndex
+                      ? 'bg-emerald-500 text-black border-emerald-400 shadow shadow-emerald-500/60'
+                      : 'bg-zinc-900 border-zinc-600 text-zinc-300'"
+                                >
+                                    <span x-text="index + 1"></span>
+                                </div>
+                                <span
+                                        class="mt-1 text-[0.65rem] uppercase tracking-wide"
+                                        :class="index === selectedPhaseIndex ? 'text-emerald-300' : 'text-zinc-500'"
+                                        x-text="fase.etiqueta"
+                                ></span>
+                            </button>
+                        </template>
+                    </div>
+
+                    <!-- Lista de fases (cards expansíveis) -->
+                    <template x-for="(fase, index) in phases" :key="fase.nome">
+                        <section
+                                class="rounded-2xl border border-zinc-800 bg-zinc-900/70 backdrop-blur shadow-xl shadow-black/40 overflow-hidden"
+                        >
+                            <button
+                                    @click="togglePhase(index)"
+                                    class="w-full flex items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4 hover:bg-zinc-900/90 transition"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div
+                                            class="w-9 h-9 flex items-center justify-center rounded-full text-lg"
+                                            :class="fase.badgeColor"
+                                    >
+                                        <span x-text="fase.icone"></span>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="text-[0.65rem] uppercase tracking-wide text-zinc-400" x-text="fase.etiqueta"></p>
+                                        <h2 class="text-base md:text-lg font-semibold" x-text="fase.nome"></h2>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="text-[0.65rem] text-zinc-500" x-text="fase.nivel"></span>
+                                    <svg
+                                            class="w-4 h-4 text-zinc-400 transition-transform"
+                                            :class="openPhase === index ? 'rotate-180' : ''"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            viewBox="0 0 24 24"
+                                    >
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+                                    </svg>
+                                </div>
+                            </button>
+
+                            <!-- Conteúdo da fase -->
+                            <div
+                                    x-show="openPhase === index"
+                                    x-collapse
+                                    class="border-t border-zinc-800 px-4 pb-4 pt-3 md:px-5 md:pb-5 md:pt-4 text-sm"
+                            >
+                                <p class="text-zinc-300 mb-3" x-text="fase.descricao"></p>
+
+                                <!-- Tópicos principais -->
+                                <div class="mb-3">
+                                    <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">
+                                        O que você aprende aqui:
+                                    </h3>
+                                    <ul class="text-zinc-200 space-y-1.5">
+                                        <template x-for="topico in fase.topicos" :key="topico">
+                                            <li class="flex items-start gap-2">
+                                                <span class="mt-1 w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                                <span x-text="topico"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+
+                                <!-- Projetos sugeridos da fase -->
+                                <div class="mb-3">
+                                    <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">
+                                        Projetos para treinar:
+                                    </h3>
+                                    <div class="grid md:grid-cols-2 gap-2.5">
+                                        <template x-for="proj in fase.projetos" :key="proj.nome">
+                                            <button
+                                                    @click="showProjectPreview(proj)"
+                                                    class="group text-left rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2.5 hover:border-emerald-400/70 hover:bg-zinc-900/90 transition"
+                                            >
+                                                <p class="text-xs font-semibold text-emerald-300 mb-0.5" x-text="proj.tipo"></p>
+                                                <p class="text-sm font-medium text-zinc-50 group-hover:text-emerald-100" x-text="proj.nome"></p>
+                                                <p class="text-[0.7rem] text-zinc-400 mt-1 line-clamp-2" x-text="proj.resumo"></p>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Stack da fase -->
+                                <div class="flex flex-wrap gap-1.5">
+                                    <template x-for="stack in fase.stack" :key="stack">
+                      <span class="px-2 py-0.5 rounded-full bg-zinc-800 text-[0.65rem] text-zinc-300 border border-zinc-700">
+                        <span>⚙️</span> <span x-text="stack"></span>
+                      </span>
+                                    </template>
+                                </div>
+                            </div>
+                        </section>
+                    </template>
+                </div>
+            </template>
+
+            <!-- MODO PROJETOS (visão por ideias) -->
+            <template x-if="viewMode === 'projetos'">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-sm font-semibold text-zinc-300 uppercase tracking-wide">
+                            Ideias de projetos por dificuldade
+                        </h2>
+                        <select
+                                x-model="filterDifficulty"
+                                class="bg-zinc-900 border border-zinc-700 text-xs rounded-lg px-2 py-1 text-zinc-200"
+                        >
+                            <option value="todos">Todos</option>
+                            <option value="iniciante">Iniciante</option>
+                            <option value="intermediario">Intermediário</option>
+                            <option value="avancado">Avançado</option>
+                        </select>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3">
+                        <template x-for="proj in filteredProjects()" :key="proj.nome">
+                            <button
+                                    @click="showProjectPreview(proj)"
+                                    class="text-left rounded-2xl border border-zinc-800 bg-zinc-900/80 hover:border-emerald-400/70 hover:bg-zinc-900 transition p-4 flex flex-col justify-between"
+                            >
+                                <div>
+                                    <p
+                                            class="text-[0.7rem] uppercase tracking-wide font-semibold mb-1"
+                                            :class="proj.dificuldade === 'iniciante'
+                        ? 'text-emerald-300'
+                        : proj.dificuldade === 'intermediario'
+                          ? 'text-sky-300'
+                          : 'text-rose-300'"
+                                            x-text="proj.badgeNivel"
+                                    ></p>
+                                    <h3 class="text-sm font-semibold mb-1" x-text="proj.nome"></h3>
+                                    <p class="text-xs text-zinc-400 mb-2 line-clamp-3" x-text="proj.resumo"></p>
+                                </div>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    <template x-for="tag in proj.stack" :key="tag">
+                      <span class="px-2 py-0.5 rounded-full bg-zinc-800 text-[0.65rem] text-zinc-300 border border-zinc-700">
+                        <span x-text="tag"></span>
+                      </span>
+                                    </template>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </main>
+
+        <!-- COLUNA DIREITA: PRÉVIA DO PROJETO SELECIONADO -->
+        <aside class="rounded-2xl border border-zinc-800 bg-zinc-900/70 backdrop-blur shadow-xl shadow-black/40 p-4 md:p-5 flex flex-col">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-400 mb-2">
+                Prévia do projeto selecionado
+            </h2>
+
+            <template x-if="!selectedProject">
+                <div class="flex-1 flex flex-col items-center justify-center text-center text-zinc-500 text-sm">
+                    <div class="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mb-3">
+                        <span class="text-2xl">👆</span>
+                    </div>
+                    <p>Clique em um projeto em qualquer fase para ver a prévia aqui.</p>
+                </div>
+            </template>
+
+            <template x-if="selectedProject">
+                <div class="flex-1 flex flex-col">
+                    <div class="mb-3">
+                        <p
+                                class="text-[0.7rem] uppercase tracking-wide font-semibold mb-1"
+                                :class="selectedProject.dificuldade === 'iniciante'
+                  ? 'text-emerald-300'
+                  : selectedProject.dificuldade === 'intermediario'
+                    ? 'text-sky-300'
+                    : 'text-rose-300'"
+                                x-text="selectedProject.badgeNivel"
+                        ></p>
+                        <h3 class="text-lg font-semibold mb-1" x-text="selectedProject.nome"></h3>
+                        <p class="text-xs text-zinc-400 mb-2" x-text="`Fase recomendada: ${selectedProject.fase}`"></p>
+                        <p class="text-sm text-zinc-200 mb-3" x-text="selectedProject.descricaoLonga"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <h4 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">Funcionalidades sugeridas:</h4>
+                        <ul class="text-xs text-zinc-200 space-y-1.5">
+                            <template x-for="feat in selectedProject.funcionalidades" :key="feat">
+                                <li class="flex items-start gap-2">
+                                    <span class="mt-1 w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                    <span x-text="feat"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <h4 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">Tecnologias:</h4>
+                        <div class="flex flex-wrap gap-1.5">
+                            <template x-for="tag in selectedProject.stack" :key="tag">
+                  <span class="px-2 py-0.5 rounded-full bg-zinc-800 text-[0.65rem] text-zinc-200 border border-zinc-700">
+                    <span x-text="tag"></span>
+                  </span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto pt-3 border-t border-zinc-800">
+                        <p class="text-[0.7rem] text-zinc-400 mb-1">Próximo passo sugerido:</p>
+                        <p class="text-xs text-zinc-200" x-text="selectedProject.nextStep"></p>
+                    </div>
+                </div>
+            </template>
+        </aside>
+    </div>
+</div>
+
+<script>
+    function roadmapApp() {
+        const phases = [
+            {
+                icone: "1",
+                etiqueta: "Fundamentos",
+                nome: "Fundamentos do PHP",
+                nivel: "Nível: Iniciante",
+                badgeColor: "bg-emerald-500 text-black",
+                descricao:
+                    "Você aprende o básico da linguagem: variáveis, condições, laços, funções e como o PHP conversa com o navegador.",
+                topicos: [
+                    "O que é PHP, servidor web e requisições HTTP",
+                    "Instalação (XAMPP / Laragon / Docker simples)",
+                    "Sintaxe básica, variáveis e tipos de dados",
+                    "if/else, switch, for, while, foreach",
+                    "Funções e arrays (simples e associativos)",
+                    "Formulários: GET, POST, $_REQUEST",
+                    "Sessões e cookies básicos"
+                ],
+                stack: ["PHP básico", "HTML", "Formulários", "Sessões"],
+                projetos: [
+                    {
+                        nome: "Login Simples com Sessão",
+                        tipo: "Mini-projeto",
+                        resumo: "Tela de login que valida usuário fixo e mantém sessão ativa.",
+                        fase: "Fundamentos",
+                        dificuldade: "iniciante",
+                        badgeNivel: "Iniciante • PHP básico",
+                        descricaoLonga:
+                            "Implemente um pequeno sistema onde o usuário faz login com usuário/senha definidos no código. Após logar, ele acessa uma página restrita até fazer logout.",
+                        funcionalidades: [
+                            "Tela de login com POST",
+                            "Validação de credenciais fixas no código",
+                            "Criação de sessão ao logar",
+                            "Página restrita que só abre logado",
+                            "Botão de logout destruindo a sessão"
+                        ],
+                        stack: ["PHP", "HTML", "Sessões"],
+                        nextStep:
+                            "Adicionar validação de campos vazios e mensagens de erro amigáveis."
+                    },
+                    {
+                        nome: "Página de Contato com Processamento",
+                        tipo: "Mini-projeto",
+                        resumo: "Formulário de contato que exibe o que o usuário digitou.",
+                        fase: "Fundamentos",
+                        dificuldade: "iniciante",
+                        badgeNivel: "Iniciante • Formulários",
+                        descricaoLonga:
+                            "Crie uma página com formulário de contato, onde ao enviar você exibe os dados de forma organizada, simulando o envio de e-mail.",
+                        funcionalidades: [
+                            "Formulário com nome, e-mail e mensagem",
+                            "Envio via método POST",
+                            "Exibição dos dados em uma página de confirmação",
+                            "Validação simples de campos obrigatórios"
+                        ],
+                        stack: ["PHP", "HTML", "Formulários"],
+                        nextStep:
+                            "Aplicar estilos mais bonitos e salvar as mensagens em um arquivo .txt."
+                    }
+                ]
+            },
+            {
+                icone: "2",
+                etiqueta: "Intermediário",
+                nome: "PHP Intermediário",
+                nivel: "Nível: Intermediário",
+                badgeColor: "bg-sky-500 text-black",
+                descricao:
+                    "Você começa a interagir com arquivos, organizar melhor o código e trabalhar com dados externos (JSON, datas, logs).",
+                topicos: [
+                    "Leitura e escrita de arquivos (logs, .txt)",
+                    "Upload de arquivos (imagens, documentos)",
+                    "Trabalhando com datas (DateTime)",
+                    "JSON: json_encode e json_decode",
+                    "Estrutura de diretórios para projetos pequenos",
+                    "Funções utilitárias nativas importantes"
+                ],
+                stack: ["PHP", "Sistema de arquivos", "JSON"],
+                projetos: [
+                    {
+                        nome: "Cadastro com Arquivo TXT",
+                        tipo: "Projeto prático",
+                        resumo: "Sistema que armazena cadastros em um arquivo em vez de banco.",
+                        fase: "PHP Intermediário",
+                        dificuldade: "intermediario",
+                        badgeNivel: "Intermediário • Arquivos",
+                        descricaoLonga:
+                            "Implemente um cadastro simples de usuários ou produtos salvando os dados em um arquivo .txt ou .json, simulando um ‘banco de dados’ plano.",
+                        funcionalidades: [
+                            "Formulário de cadastro",
+                            "Salvamento dos dados em arquivo",
+                            "Listagem dos registros cadastrados",
+                            "Possibilidade de editar ou remover (reprocessando o arquivo)",
+                            "Registro de log de ações em outro arquivo"
+                        ],
+                        stack: ["PHP", "Arquivos", "JSON"],
+                        nextStep:
+                            "Migrar esse sistema para usar banco de dados MySQL na próxima fase."
+                    },
+                    {
+                        nome: "Galeria de Imagens com Upload",
+                        tipo: "Projeto prático",
+                        resumo: "Usuário faz upload de imagens e vê a mini galeria montada.",
+                        fase: "PHP Intermediário",
+                        dificuldade: "intermediario",
+                        badgeNivel: "Intermediário • Upload",
+                        descricaoLonga:
+                            "Crie uma pequena galeria de imagens onde o usuário envia fotos, que ficam salvas em uma pasta e são listadas automaticamente.",
+                        funcionalidades: [
+                            "Formulário de upload de imagens",
+                            "Validação de tipo e tamanho do arquivo",
+                            "Salvar imagem em pasta pública",
+                            "Listar todas as imagens já enviadas",
+                            "Criar miniaturas (opcional)"
+                        ],
+                        stack: ["PHP", "Upload", "HTML/CSS"],
+                        nextStep:
+                            "Adicionar um sistema de autenticação simples para controlar quem pode fazer upload."
+                    }
+                ]
+            },
+            {
+                icone: "3",
+                etiqueta: "POO",
+                nome: "POO em PHP",
+                nivel: "Nível: Intermediário",
+                badgeColor: "bg-violet-500 text-black",
+                descricao:
+                    "Você passa a organizar o código com classes, objetos e padrões, preparando a cabeça para frameworks como Laravel.",
+                topicos: [
+                    "Classes, objetos e construtores",
+                    "Atributos, métodos e visibilidade",
+                    "Herança, polimorfismo e encapsulamento",
+                    "Métodos e propriedades estáticas",
+                    "Interfaces e classes abstratas",
+                    "Namespaces e autoload com Composer"
+                ],
+                stack: ["PHP OOP", "Composer"],
+                projetos: [
+                    {
+                        nome: "Sistema de Usuários Orientado a Objetos",
+                        tipo: "Projeto POO",
+                        resumo: "Classe Pessoa, Aluno, Professor e Admin com herança.",
+                        fase: "POO em PHP",
+                        dificuldade: "intermediario",
+                        badgeNivel: "Intermediário • POO",
+                        descricaoLonga:
+                            "Crie uma hierarquia de classes para representar usuários do sistema, com herança e métodos específicos para cada tipo.",
+                        funcionalidades: [
+                            "Classe base Pessoa com nome e e-mail",
+                            "Subclasses Aluno, Professor e Admin",
+                            "Métodos específicos (por exemplo, aprovar aluno, criar turma)",
+                            "Lista de usuários com polimorfismo (todos tratados como Pessoa)",
+                            "Uso de autoload com Composer"
+                        ],
+                        stack: ["PHP OOP", "Composer"],
+                        nextStep:
+                            "Conectar esse sistema orientado a objetos com banco de dados usando PDO."
+                    }
+                ]
+            },
+            {
+                icone: "4",
+                etiqueta: "Banco de Dados",
+                nome: "MySQL + PDO",
+                nivel: "Nível: Intermediário",
+                badgeColor: "bg-amber-500 text-black",
+                descricao:
+                    "Agora você integra PHP com banco de dados real, cria tabelas e sistemas que persistem dados de verdade.",
+                topicos: [
+                    "Conceitos básicos de MySQL e tabelas",
+                    "Conexão com banco usando PDO",
+                    "CRUD completo com Prepared Statements",
+                    "Prevenção de SQL Injection",
+                    "Pequena arquitetura MVC artesanal"
+                ],
+                stack: ["PHP", "MySQL", "PDO", "MVC simples"],
+                projetos: [
+                    {
+                        nome: "CRUD de Produtos",
+                        tipo: "Projeto com DB",
+                        resumo: "Cadastro, listagem, edição e exclusão de produtos.",
+                        fase: "Banco de Dados",
+                        dificuldade: "intermediario",
+                        badgeNivel: "Intermediário • CRUD",
+                        descricaoLonga:
+                            "Crie um painel simples onde é possível cadastrar produtos, listar todos, editar e excluir, tudo salvo em um banco MySQL.",
+                        funcionalidades: [
+                            "Tela de listagem paginada",
+                            "Formulário para criar e editar produtos",
+                            "Validações básicas no back-end",
+                            "Uso de Prepared Statements com PDO",
+                            "Feedback visual (mensagens de sucesso/erro)"
+                        ],
+                        stack: ["PHP", "MySQL", "PDO"],
+                        nextStep:
+                            "Reaproveitar a lógica desse CRUD quando começar com um framework (Laravel)."
+                    }
+                ]
+            },
+            {
+                icone: "5",
+                etiqueta: "Moderno",
+                nome: "PHP Moderno e Boas Práticas",
+                nivel: "Nível: Intermediário/Avançado",
+                badgeColor: "bg-fuchsia-500 text-black",
+                descricao:
+                    "Você começa a escrever PHP do jeito profissional: PSR, exceptions, tipagem e padrões de projeto.",
+                topicos: [
+                    "PSR (padronização da comunidade PHP-FIG)",
+                    "Composer e organização de namespaces",
+                    "Type hints e tipos de retorno",
+                    "Exceptions e tratamento de erros",
+                    "Padrões de projeto básicos (Service, Repository)",
+                    "Envio de e-mail com bibliotecas externas"
+                ],
+                stack: ["PHP moderno", "Composer", "PSR"],
+                projetos: [
+                    {
+                        nome: "Mini Framework MVC Próprio",
+                        tipo: "Desafio",
+                        resumo: "Crie seu próprio mini framework com rotas, controller e view.",
+                        fase: "PHP Moderno",
+                        dificuldade: "avancado",
+                        badgeNivel: "Avançado • Arquitetura",
+                        descricaoLonga:
+                            "Implemente um microframework para entender como frameworks grandes funcionam por baixo: roteamento simples, controllers, views e um container básico.",
+                        funcionalidades: [
+                            "Sistema de rotas baseado em URL",
+                            "Controllers organizados por namespace",
+                            "Views com templates em PHP",
+                            "Classe Request e Response simples",
+                            "Tratamento de erros centralizado"
+                        ],
+                        stack: ["PHP", "Composer", "PSR"],
+                        nextStep:
+                            "Comparar sua solução com a arquitetura de frameworks como Laravel e Symfony."
+                    }
+                ]
+            },
+            {
+                icone: "6",
+                etiqueta: "Framework",
+                nome: "Laravel",
+                nivel: "Nível: Avançado",
+                badgeColor: "bg-emerald-400 text-black",
+                descricao:
+                    "Aqui você usa tudo que aprendeu para trabalhar com o principal framework PHP para projetos modernos.",
+                topicos: [
+                    "Instalação e estrutura do Laravel",
+                    "Rotas, Controllers e Views (Blade)",
+                    "Eloquent ORM, Migrations e Seeders",
+                    "FormRequest e validações",
+                    "Autenticação, Middleware e Policies",
+                    "APIs REST com Laravel Sanctum",
+                    "Filas, Jobs e Notificações básicas"
+                ],
+                stack: ["Laravel", "Eloquent", "Blade", "API REST"],
+                projetos: [
+                    {
+                        nome: "Painel Administrativo + API",
+                        tipo: "Projeto Laravel",
+                        resumo: "Dashboard com CRUD e API consumível por front-end ou mobile.",
+                        fase: "Laravel",
+                        dificuldade: "avancado",
+                        badgeNivel: "Avançado • Laravel",
+                        descricaoLonga:
+                            "Crie um painel admin completo com autenticação, CRUD de entidades, filtros, paginação e uma API para ser consumida por um front em Vue/React ou aplicativo mobile.",
+                        funcionalidades: [
+                            "Login e registro com Laravel Breeze / Fortify",
+                            "CRUD completo com Eloquent e Migrations",
+                            "Filtros, busca e paginação no painel",
+                            "API protegida por token (Sanctum)",
+                            "Painel com Blade e Tailwind",
+                            "Notificações por e-mail ou in-app"
+                        ],
+                        stack: ["Laravel", "MySQL", "Blade", "Tailwind"],
+                        nextStep:
+                            "Adicionar testes automatizados e preparar deploy em produção."
+                    }
+                ]
+            },
+            {
+                icone: "7",
+                etiqueta: "DevOps",
+                nome: "Ferramentas e Deploy",
+                nivel: "Nível: Avançado",
+                badgeColor: "bg-sky-400 text-black",
+                descricao:
+                    "Hora de colocar o projeto no mundo real: versionamento, Docker, deploy e performance.",
+                topicos: [
+                    "Git e GitHub (branches, pull requests)",
+                    "Docker e Docker Compose",
+                    "Deploy em VPS (Nginx/Apache)",
+                    "Configuração de .env e secrets",
+                    "Logs, monitoramento e debug",
+                    "Cache, Redis e otimização de consultas"
+                ],
+                stack: ["Git", "Docker", "Nginx/Apache", "Redis"],
+                projetos: [
+                    {
+                        nome: "Projeto Laravel em Produção",
+                        tipo: "Deploy",
+                        resumo: "Suba seu projeto Laravel em uma VPS com Docker.",
+                        fase: "DevOps",
+                        dificuldade: "avancado",
+                        badgeNivel: "Avançado • Deploy",
+                        descricaoLonga:
+                            "Pegue um projeto Laravel pronto e faça o deploy em uma máquina na nuvem usando Docker, configurando Nginx, banco e variáveis de ambiente.",
+                        funcionalidades: [
+                            "Dockerfile para aplicação Laravel",
+                            "Docker Compose com app + banco",
+                            "Configuração de Nginx como proxy",
+                            "Configuração de variáveis de ambiente seguras",
+                            "Monitoramento de logs da aplicação"
+                        ],
+                        stack: ["Laravel", "Docker", "Nginx"],
+                        nextStep:
+                            "Automatizar o processo de deploy com scripts ou CI/CD."
+                    }
+                ]
+            }
+        ];
+
+        // Flatten de projetos para o modo "projetos"
+        const allProjects = phases.flatMap((fase) =>
+            fase.projetos.map((p) => ({
+                ...p,
+                fase: fase.nome
+            }))
+        );
+
+        return {
+            phases,
+            selectedPhaseIndex: 0,
+            openPhase: 0,
+            viewMode: "fases",
+            selectedProject: null,
+            filterDifficulty: "todos",
+            selectPhase(index) {
+                this.selectedPhaseIndex = index;
+                this.openPhase = index;
+                this.selectedProject = null;
+            },
+            togglePhase(index) {
+                this.openPhase = this.openPhase === index ? -1 : index;
+                this.selectedPhaseIndex = index;
+            },
+            showProjectPreview(project) {
+                this.selectedProject = project;
+            },
+            progressPercent() {
+                if (!this.phases.length) return 0;
+                return ((this.selectedPhaseIndex + 1) / this.phases.length) * 100;
+            },
+            toggleView() {
+                this.viewMode = this.viewMode === "fases" ? "projetos" : "fases";
+                this.selectedProject = null;
+            },
+            filteredProjects() {
+                if (this.filterDifficulty === "todos") return allProjects;
+                return allProjects.filter((p) => p.dificuldade === this.filterDifficulty);
+            }
+        };
+    }
+</script>
+</body>
+</html>
